@@ -1,0 +1,11 @@
+{
+  "name": "com.rasong.statemachine",
+  "displayName": "RSM",
+  "version": "0.0.1",
+  "unity": "6000.0",
+  "author": {
+    "name": "Requelme Hugo Rasong",
+    "url": "https://github.com/gesekanmagnet"
+  },
+  "description": "Customizable State Machine via Unity Inspector using ScriptableObject for dev-friendly"
+}
