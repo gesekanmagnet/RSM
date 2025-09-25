@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace RSM
 {
-    [CustomPropertyDrawer(typeof(Transition))]
+    [CustomPropertyDrawer(typeof(ITransition), true)]
     public class AIStateDrawer : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)

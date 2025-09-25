@@ -4,10 +4,10 @@ namespace RSM
 {
     public class AIBrain<T> : MonoBehaviour, IBrain where T : MonoBehaviour
     {
-        private State<T> currentState;
+        private State currentState;
 
         [Tooltip("All current active states")]
-        [SerializeField] private State<T>[] states;
+        [SerializeField] private State[] states;
 
         private T control;
 
@@ -18,14 +18,19 @@ namespace RSM
         /// <summary>
         /// All current active states
         /// </summary>
-        public IStateWrapper[] WrappedStates => states;
+        public IState[] WrappedStates => states;
 
-        private float timeInState;
+        protected float timeInState { get; set; }
         /// <summary>
         /// The amount of time in seconds that has elapsed
         /// since state was entered
         /// </summary>
         public float TimeInState => timeInState;
+        protected bool stateFinished { get; set; }
+        /// <summary>
+        /// Indicates whether the current state has completed
+        /// </summary>
+        public bool StateFinished => stateFinished;
 
         protected void Awake()
         {
@@ -51,7 +56,7 @@ namespace RSM
             timeInState += Time.deltaTime;
 
             currentState.active.OnUpdateState(control);
-            currentState.TickTransition(this);
+            currentState.TickTransition(this, control);
         }
 
         protected void FixedUpdate()
@@ -63,7 +68,7 @@ namespace RSM
         /// Switch the current state to the next determined state
         /// </summary>
         /// <param name="index">The next state index</param>
-        public void SwitchState(int index)
+        protected void SwitchState(int index)
         {
             if (index == -1) return;
             if (currentState.Equals(states[index])) return;
@@ -73,6 +78,7 @@ namespace RSM
             currentState.active.OnEnterState(control);
 
             timeInState = 0;
+            stateFinished = false;
         }
 
         /// <summary>
@@ -92,70 +98,72 @@ namespace RSM
         }
 
         /// <summary>
+        /// Set the current state to finish, useful for transition handling
+        /// </summary>
+        public void FinishTheCurrentState() => stateFinished = true;
+
+        /// <summary>
         /// Executed in Awake function
         /// </summary>
         protected virtual void Initialize() { }
-    }
-
-    public interface IBrain
-    {
-        IStateWrapper[] WrappedStates { get; }
-    }
-
-    public interface IStateWrapper
-    {
-        ScriptableObject Active { get; }
-    }
-
-    [System.Serializable]
-    public class State<T> : IStateWrapper where T : MonoBehaviour
-    {
-        [Tooltip("State for the Brain")]
-        [SerializeField] private AIState<T> state;
-        [Tooltip("All active transition decisions")]
-        [SerializeField] private Transition[] transitions;
-
-        /// <summary>
-        /// State for the Brain
-        /// </summary>
-        public AIState<T> active => state;
-
-        public ScriptableObject Active => state;
-
-        /// <summary>
-        /// Update the transition condition per frame
-        /// </summary>
-        /// <param name="brain">Current used AI Brain</param>
-        public void TickTransition(AIBrain<T> brain)
+        
+        [System.Serializable]
+        public class State : IState
         {
-            if(transitions.Length == 0) return;
+            [Tooltip("State for the Brain")]
+            [SerializeField] private AIState<T> state;
+            [Tooltip("All active transition decisions")]
+            [SerializeField] private Transition[] transitions;
 
-            foreach (var item in transitions)
+            /// <summary>
+            /// State for the Brain
+            /// </summary>
+            public AIState<T> active => state;
+
+            public ScriptableObject Active => state;
+
+            /// <summary>
+            /// Update the transition condition per frame
+            /// </summary>
+            /// <param name="brain">Current used AI Brain</param>
+            public void TickTransition(AIBrain<T> brain, T control)
             {
-                if(item.Decision.TrueCondition())
+                if(transitions.Length == 0) return;
+
+                foreach (var item in transitions)
                 {
-                    brain.SwitchState(item.NextStateIndex);
-                    break;
+                    if(item.Decision == null) continue;
+
+                    if(item.Decision.TrueCondition(control))
+                    {
+                        brain.SwitchState(item.NextStateIndex);
+                        break;
+                    }
                 }
             }
         }
+
+        [System.Serializable]
+        public struct Transition : ITransition
+        {
+            [Tooltip("Condition for switch states")]
+            [SerializeField] private AIDecision<T> decision;
+            [Tooltip("The next state after condition is met")]
+            [SerializeField] private int nextStateIndex;
+
+            /// <summary>
+            /// Condition for switch states
+            /// </summary>
+            public AIDecision<T> Decision => decision;
+            /// <summary>
+            /// The next state after condition is met
+            /// </summary>
+            public int NextStateIndex => nextStateIndex;
+        }
     }
 
-    [System.Serializable]
-    public struct Transition
-    {
-        [Tooltip("Condition for switch states")]
-        [SerializeField] private AIDecision decision;
-        [Tooltip("The next state after condition is met")]
-        [SerializeField] private int nextStateIndex;
+    public interface IBrain { IState[] WrappedStates { get; } }
+    public interface IState { ScriptableObject Active { get; } }
+    public interface ITransition { }
 
-        /// <summary>
-        /// Condition for switch states
-        /// </summary>
-        public AIDecision Decision => decision;
-        /// <summary>
-        /// The next state after condition is met
-        /// </summary>
-        public int NextStateIndex => nextStateIndex;
-    }
 }

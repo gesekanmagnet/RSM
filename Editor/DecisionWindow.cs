@@ -24,7 +24,7 @@ namespace RSM
         {
             decisionTypes = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(a => a.GetTypes())
-                .Where(t => t.IsSubclassOf(typeof(AIDecision)) && !t.IsAbstract)
+                .Where(t => t.IsSubclassOf(typeof(ITransition)) && !t.IsAbstract)
                 .ToArray();
 
             decisionNames = decisionTypes.Select(t => t.Name).ToArray();
